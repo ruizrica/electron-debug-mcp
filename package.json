@@ -9,7 +9,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "cleanup-duplicates": "tsx scripts/cleanup-duplicates.ts"
   },
   "keywords": ["electron", "debug", "mcp", "model-context-protocol"],
   "author": "",

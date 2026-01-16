@@ -19,21 +19,12 @@ const ELECTRON_RESOURCES = {
   INFO: "electron://info",
   PROCESS: "electron://process/",
   LOGS: "electron://logs/",
-  OPERATION: "electron://operation/",
   CDP: "electron://cdp/",
   TARGETS: "electron://targets"
 };
 
-// Define operation types for Electron debugging
-const ELECTRON_OPERATIONS = {
-  START: "start",
-  STOP: "stop",
-  LIST: "list",
-  RELOAD: "reload",
-  PAUSE: "pause",
-  RESUME: "resume",
-  EVALUATE: "evaluate"
-};
+// Note: Operations have been moved to tools (electron_start, electron_stop, etc.)
+// See ListToolsRequestSchema and CallToolRequestSchema handlers
 
 // Type definitions for Electron processes and debugging info
 interface ElectronProcess {
@@ -194,8 +185,9 @@ async function startElectronApp(appPath: string, debugPort?: number, startupTime
     electronProcess.logs.push(log);
     // Rotate logs if exceeding maximum size
     if (electronProcess.logs.length > MAX_LOG_ENTRIES) {
-      // Remove oldest 10% of logs when limit exceeded
-      const removeCount = Math.floor(MAX_LOG_ENTRIES * 0.1);
+      // Remove enough entries to bring back to MAX_LOG_ENTRIES
+      // This ensures the array never exceeds the limit, even with rapid log additions
+      const removeCount = electronProcess.logs.length - MAX_LOG_ENTRIES;
       electronProcess.logs.splice(0, removeCount);
     }
   };
