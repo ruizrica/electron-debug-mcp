@@ -465,42 +465,12 @@ const server = new Server(
 
 // List available resources when clients request them
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  // Create a list of resources including all active Electron processes and operations
+  // Create a list of resources (operations moved to tools)
   const resources = [
     {
       uri: ELECTRON_RESOURCES.INFO,
       name: "Electron Debugging Info",
       description: "Information about the Electron debugging capabilities",
-      mimeType: "application/json",
-    },
-    {
-      uri: `${ELECTRON_RESOURCES.OPERATION}${ELECTRON_OPERATIONS.START}`,
-      name: "Start Electron App",
-      description: "Start an Electron application for debugging",
-      mimeType: "application/json",
-    },
-    {
-      uri: `${ELECTRON_RESOURCES.OPERATION}${ELECTRON_OPERATIONS.STOP}`,
-      name: "Stop Electron App",
-      description: "Stop a running Electron application",
-      mimeType: "application/json",
-    },
-    {
-      uri: `${ELECTRON_RESOURCES.OPERATION}${ELECTRON_OPERATIONS.LIST}`,
-      name: "List Electron Apps",
-      description: "List all running Electron applications",
-      mimeType: "application/json",
-    },
-    {
-      uri: `${ELECTRON_RESOURCES.OPERATION}${ELECTRON_OPERATIONS.RELOAD}`,
-      name: "Reload Electron App",
-      description: "Reload a running Electron application",
-      mimeType: "application/json",
-    },
-    {
-      uri: `${ELECTRON_RESOURCES.OPERATION}${ELECTRON_OPERATIONS.EVALUATE}`,
-      name: "Evaluate JavaScript",
-      description: "Evaluate JavaScript in a running Electron application",
       mimeType: "application/json",
     },
     {
@@ -707,82 +677,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     };
   }
   
-  // Handle operation resources
-  if (uri.startsWith(ELECTRON_RESOURCES.OPERATION)) {
-    const operationMatch = uri.match(/^electron:\/\/operation\/([^/]+)(?:\/(.*))?$/);
-    if (!operationMatch) {
-      throw new Error(`Invalid operation URI: ${uri}`);
-    }
-    
-    const operation = operationMatch[1];
-    let result: any;
-    
-    // Handle different operation types
-    if (operation === ELECTRON_OPERATIONS.START) {
-      // For the read request, just return instructions on how to use this resource
-      result = {
-        instructions: "To start an Electron app, send a POST request with JSON body: { \"appPath\": \"/path/to/electron/app\", \"debugPort\": 9222 }",
-        example: {
-          appPath: "C:\\path\\to\\electron\\app",
-          debugPort: 9222 // optional
-        }
-      };
-    } else if (operation === ELECTRON_OPERATIONS.STOP) {
-      // For the read request, just return instructions on how to use this resource
-      result = {
-        instructions: "To stop an Electron app, send a POST request with JSON body: { \"processId\": \"electron-12345678\" }",
-        example: {
-          processId: "electron-12345678"
-        }
-      };
-    } else if (operation === ELECTRON_OPERATIONS.RELOAD) {
-      // For the read request, just return instructions on how to use this resource
-      result = {
-        instructions: "To reload an Electron app, send a POST request with JSON body: { \"processId\": \"electron-12345678\", \"targetId\": \"page-123\" }",
-        example: {
-          processId: "electron-12345678",
-          targetId: "page-123" // Optional, if not provided will reload all targets
-        }
-      };
-    } else if (operation === ELECTRON_OPERATIONS.EVALUATE) {
-      // For the read request, just return instructions on how to use this resource
-      result = {
-        instructions: "To evaluate JavaScript in an Electron app, send a POST request with JSON body: { \"processId\": \"electron-12345678\", \"targetId\": \"page-123\", \"expression\": \"document.title\" }",
-        example: {
-          processId: "electron-12345678",
-          targetId: "page-123",
-          expression: "document.title",
-          returnByValue: true // Optional, whether to return the result by value
-        }
-      };
-    } else if (operation === ELECTRON_OPERATIONS.LIST) {
-      // For the list operation, we can return the actual list of processes
-      const processes = Array.from(electronProcesses.entries()).map(([id, proc]) => ({
-        id,
-        name: proc.name,
-        status: proc.status,
-        pid: proc.pid,
-        startTime: proc.startTime,
-        appPath: proc.appPath,
-        debugPort: proc.debugPort
-      }));
-      
-      result = {
-        processes
-      };
-    } else {
-      throw new Error(`Unknown operation: ${operation}`);
-    }
-    
-    return {
-      contents: [
-        {
-          uri,
-          text: JSON.stringify(result, null, 2)
-        }
-      ]
-    };
-  }
+  // Operation resources removed - use tools instead (electron_start, electron_stop, etc.)
   
   throw new Error(`Resource not found: ${uri}`);
 });

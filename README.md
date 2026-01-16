@@ -97,19 +97,20 @@ The server exposes the following resource endpoints:
 | `electron://logs/{id}` | Access to logs for a specific process |
 | `electron://targets` | List of all available debug targets |
 | `electron://cdp/{processId}/{targetId}` | CDP access for a specific target |
-| `electron://operation/{operation}` | Operations to control Electron apps |
 
-### Available Operations
+## 🛠️ Tools API
 
-| Operation | Description |
-|-----------|-------------|
-| `start` | Start an Electron application |
-| `stop` | Stop a running Electron process |
-| `list` | List all running Electron processes |
-| `reload` | Reload a specific page or application |
-| `evaluate` | Execute JavaScript in a page context |
-| `pause` | Pause JavaScript execution |
-| `resume` | Resume JavaScript execution |
+The server exposes executable tools for controlling Electron applications:
+
+| Tool | Description |
+|------|-------------|
+| `electron_start` | Start an Electron application with debugging enabled |
+| `electron_stop` | Stop a running Electron process |
+| `electron_list` | List all running Electron processes |
+| `electron_reload` | Reload a specific page or application |
+| `electron_evaluate` | Execute JavaScript in a page context |
+| `electron_pause` | Pause JavaScript execution |
+| `electron_resume` | Resume JavaScript execution |
 
 ## 🔍 Chrome DevTools Protocol Integration
 
@@ -147,13 +148,14 @@ Examples:
 ### Starting an Electron App
 
 ```javascript
-// Example request (using an MCP client)
-const response = await mcpClient.readResource({
-  uri: "electron://operation/start",
-  content: JSON.stringify({
+// Example using MCP tools (recommended)
+const response = await mcpClient.callTool({
+  name: "electron_start",
+  arguments: {
     appPath: "C:\\path\\to\\your\\electron\\app",
-    debugPort: 9222  // Optional debugging port
-  })
+    debugPort: 9222,  // Optional debugging port
+    startupTimeout: 30000  // Optional startup timeout in ms
+  }
 });
 ```
 
@@ -170,8 +172,19 @@ const infoResponse = await mcpClient.readResource({
 ### Executing JavaScript in a Page
 
 ```javascript
-// Execute JavaScript in a page
-const evalResponse = await mcpClient.readResource({
+// Execute JavaScript using tools (recommended)
+const evalResponse = await mcpClient.callTool({
+  name: "electron_evaluate",
+  arguments: {
+    processId: "electron-123456",
+    targetId: "page-1",
+    expression: "document.title",
+    returnByValue: true
+  }
+});
+
+// Or using CDP resource endpoint
+const cdpResponse = await mcpClient.readResource({
   uri: `electron://cdp/electron-123456/page-1/Runtime/evaluate`,
   content: JSON.stringify({
     expression: "document.title",
