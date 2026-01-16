@@ -10,21 +10,21 @@ declare module 'chrome-remote-interface' {
     alterPath?: (path: string) => string;
   }
 
-  interface CDPClient {
-    send(method: string, params?: object): Promise<any>;
-    on(event: string, callback: (params: any) => void): void;
+  export interface CDPClient {
+    send(method: string, params?: Record<string, unknown>): Promise<unknown>;
+    on(event: string, callback: (params: unknown) => void): void;
     close(): void;
   }
 
   function CDP(options?: CDPOptions): Promise<CDPClient>;
   
   namespace CDP {
-    function List(options?: Omit<CDPOptions, 'target'>): Promise<any[]>;
+    function List(options?: Omit<CDPOptions, 'target'>): Promise<unknown[]>;
     function New(options?: Omit<CDPOptions, 'target'>): Promise<{ webSocketDebuggerUrl: string }>;
     function Activate(options?: CDPOptions): Promise<void>;
     function Close(options?: CDPOptions): Promise<void>;
-    function Version(options?: Omit<CDPOptions, 'target'>): Promise<any>;
-    function Protocol(options?: Omit<CDPOptions, 'target'>): Promise<any>;
+    function Version(options?: Omit<CDPOptions, 'target'>): Promise<unknown>;
+    function Protocol(options?: Omit<CDPOptions, 'target'>): Promise<unknown>;
   }
 
   export = CDP;

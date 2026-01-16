@@ -2,14 +2,15 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   ListResourcesRequestSchema,
-  ReadResourceRequestSchema
+  ReadResourceRequestSchema,
+  ListToolsRequestSchema,
+  CallToolRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
 import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-// @ts-ignore
-import CDP from 'chrome-remote-interface';
+import CDP, { CDPClient } from 'chrome-remote-interface';
 import * as http from 'http';
 import * as net from 'net';
 
@@ -45,7 +46,7 @@ interface ElectronProcess {
   startTime: Date;
   logs: string[];
   appPath: string;
-  cdpClient?: any; // Chrome DevTools Protocol client
+  cdpClient?: CDPClient; // Chrome DevTools Protocol client
   targets?: CDPTarget[]; // Available debugging targets
   lastTargetUpdate?: Date; // When targets were last updated
 }
@@ -87,15 +88,50 @@ interface ProcessInfo {
 const electronProcesses: Map<string, ElectronProcess> = new Map();
 
 // Helper functions for Electron debugging
-function getElectronExecutablePath(): string {
-  // Try to find electron in common locations
-  const possiblePaths = [
-    // Check if electron is installed globally
-    path.join(os.homedir(), 'AppData', 'Roaming', 'npm', 'electron.cmd'),
-    // Check in node_modules of the current project
-    path.resolve(process.cwd(), 'node_modules', '.bin', 'electron.cmd')
-  ];
 
+/**
+ * Check if a port is available
+ */
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.listen(port, () => {
+      server.once('close', () => resolve(true));
+      server.close();
+    });
+    server.on('error', () => resolve(false));
+  });
+}
+
+function getElectronExecutablePath(): string {
+  const platform = os.platform();
+  const possiblePaths: string[] = [];
+
+  if (platform === 'win32') {
+    // Windows paths
+    possiblePaths.push(
+      path.join(os.homedir(), 'AppData', 'Roaming', 'npm', 'electron.cmd'),
+      path.resolve(process.cwd(), 'node_modules', '.bin', 'electron.cmd'),
+      path.resolve(process.cwd(), 'node_modules', 'electron', 'dist', 'electron.exe')
+    );
+  } else if (platform === 'darwin') {
+    // macOS paths
+    possiblePaths.push(
+      path.resolve(process.cwd(), 'node_modules', '.bin', 'electron'),
+      path.resolve(process.cwd(), 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron'),
+      path.join(os.homedir(), '.npm-global', 'bin', 'electron')
+    );
+  } else {
+    // Linux paths
+    possiblePaths.push(
+      path.resolve(process.cwd(), 'node_modules', '.bin', 'electron'),
+      path.resolve(process.cwd(), 'node_modules', 'electron', 'dist', 'electron'),
+      path.join(os.homedir(), '.npm-global', 'bin', 'electron'),
+      path.join(os.homedir(), '.local', 'bin', 'electron')
+    );
+  }
+
+  // Check each possible path
   for (const electronPath of possiblePaths) {
     if (fs.existsSync(electronPath)) {
       return electronPath;
@@ -106,13 +142,27 @@ function getElectronExecutablePath(): string {
   return 'electron';
 }
 
-async function startElectronApp(appPath: string, debugPort?: number): Promise<ElectronProcess> {
+async function startElectronApp(appPath: string, debugPort?: number, startupTimeout: number = 30000): Promise<ElectronProcess> {
   const id = `electron-${Date.now()}`;
   const args = [appPath];
   
-  // If no debug port specified, choose a random one between 9222 and 9999
+  // If no debug port specified, find an available port between 9222 and 9999
   if (!debugPort) {
-    debugPort = Math.floor(Math.random() * (9999 - 9222 + 1)) + 9222;
+    for (let port = 9222; port <= 9999; port++) {
+      if (await isPortAvailable(port)) {
+        debugPort = port;
+        break;
+      }
+    }
+    if (!debugPort) {
+      throw new Error('No available debug port found in range 9222-9999');
+    }
+  } else {
+    // Check if specified port is available
+    const available = await isPortAvailable(debugPort);
+    if (!available) {
+      throw new Error(`Debug port ${debugPort} is not available`);
+    }
   }
   
   // Add debugging flags
@@ -138,16 +188,28 @@ async function startElectronApp(appPath: string, debugPort?: number): Promise<El
   };
   
   // Capture stdout and stderr
+  const MAX_LOG_ENTRIES = 1000; // Prevent memory leak by limiting log entries
+  
+  const addLog = (log: string) => {
+    electronProcess.logs.push(log);
+    // Rotate logs if exceeding maximum size
+    if (electronProcess.logs.length > MAX_LOG_ENTRIES) {
+      // Remove oldest 10% of logs when limit exceeded
+      const removeCount = Math.floor(MAX_LOG_ENTRIES * 0.1);
+      electronProcess.logs.splice(0, removeCount);
+    }
+  };
+  
   electronProc.stdout.on('data', (data: Buffer) => {
     const log = data.toString();
-    electronProcess.logs.push(log);
+    addLog(log);
     // Log to console instead of sending notifications
     console.log(`[Electron ${id}] ${log}`);
   });
   
   electronProc.stderr.on('data', (data: Buffer) => {
     const log = data.toString();
-    electronProcess.logs.push(log);
+    addLog(log);
     // Log to console instead of sending notifications
     console.error(`[Electron ${id}] ${log}`);
   });
@@ -166,18 +228,30 @@ async function startElectronApp(appPath: string, debugPort?: number): Promise<El
       }
       electronProcess.cdpClient = undefined;
     }
+    
+    // Remove process from map on exit
+    electronProcesses.delete(id);
   });
   
   electronProcesses.set(id, electronProcess);
   
-  // Wait a moment for the app to start and initialize the debugging port
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Wait for the app to start and initialize the debugging port with timeout
+  const startTime = Date.now();
+  let connected = false;
   
-  // Try to connect to CDP and get available targets
-  try {
-    await updateCDPTargets(electronProcess);
-  } catch (err) {
-    console.warn(`[Electron ${id}] Could not connect to CDP initially:`, err);
+  while (Date.now() - startTime < startupTimeout) {
+    try {
+      await updateCDPTargets(electronProcess);
+      connected = true;
+      break;
+    } catch (err) {
+      // Port not ready yet, wait a bit and retry
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  
+  if (!connected) {
+    console.warn(`[Electron ${id}] Could not connect to CDP within ${startupTimeout}ms timeout`);
   }
   
   return electronProcess;
@@ -201,6 +275,10 @@ function stopElectronApp(id: string): boolean {
   
   electronProcess.process.kill();
   electronProcess.status = 'stopped';
+  
+  // Remove process from map
+  electronProcesses.delete(id);
+  
   return true;
 }
 
@@ -235,20 +313,50 @@ async function getElectronDebugInfo(id: string): Promise<ElectronDebugInfo | nul
     }
   ];
   
+  // Try to get real metrics from CDP, fallback to unavailable
+  let mainCpuUsage: number | 'unavailable' = 'unavailable';
+  let mainMemoryUsage: number | 'unavailable' = 'unavailable';
+  let rendererCpuUsage: number | 'unavailable' = 'unavailable';
+  let rendererMemoryUsage: number | 'unavailable' = 'unavailable';
+
+  if (electronProcess.cdpClient) {
+    try {
+      // Try to get performance metrics from CDP Performance domain
+      const performanceMetrics = await electronProcess.cdpClient.send('Performance.getMetrics');
+      if (performanceMetrics && performanceMetrics.metrics) {
+        const metrics = performanceMetrics.metrics as Array<{ name: string; value: number }>;
+        const cpuMetric = metrics.find(m => m.name === 'CPUUsage');
+        const memoryMetric = metrics.find(m => m.name === 'JSHeapUsedSize');
+        
+        if (cpuMetric) {
+          mainCpuUsage = cpuMetric.value;
+          rendererCpuUsage = cpuMetric.value * 0.5; // Estimate renderer as half
+        }
+        if (memoryMetric) {
+          mainMemoryUsage = memoryMetric.value;
+          rendererMemoryUsage = memoryMetric.value * 0.5; // Estimate renderer as half
+        }
+      }
+    } catch (err) {
+      // CDP metrics not available, keep as 'unavailable'
+      console.warn(`[Electron ${id}] Could not get performance metrics:`, err);
+    }
+  }
+
   return {
     webContents,
     processes: {
       main: {
         pid: electronProcess.pid || 0,
-        cpuUsage: Math.random() * 10, // We could get real data with CDP
-        memoryUsage: Math.random() * 100 * 1024 * 1024,
+        cpuUsage: mainCpuUsage,
+        memoryUsage: mainMemoryUsage,
         status: 'running'
       },
       renderers: [
         {
           pid: (electronProcess.pid || 0) + 1,
-          cpuUsage: Math.random() * 5,
-          memoryUsage: Math.random() * 50 * 1024 * 1024,
+          cpuUsage: rendererCpuUsage,
+          memoryUsage: rendererMemoryUsage,
           status: 'running'
         }
       ]
@@ -286,7 +394,7 @@ async function updateCDPTargets(electronProcess: ElectronProcess): Promise<CDPTa
 /**
  * Connects to a specific CDP target
  */
-async function connectToCDPTarget(electronProcess: ElectronProcess, targetId: string): Promise<any> {
+async function connectToCDPTarget(electronProcess: ElectronProcess, targetId: string): Promise<CDPClient> {
   if (!electronProcess.debugPort) {
     throw new Error('No debug port available for this Electron process');
   }
@@ -308,7 +416,7 @@ async function connectToCDPTarget(electronProcess: ElectronProcess, targetId: st
     const client = await CDP({
       target: targetId,
       port: electronProcess.debugPort
-    } as any);
+    });
     
     // Store the client for later use
     electronProcess.cdpClient = client;
@@ -322,7 +430,7 @@ async function connectToCDPTarget(electronProcess: ElectronProcess, targetId: st
 /**
  * Executes a CDP command on a target
  */
-async function executeCDPCommand(electronProcess: ElectronProcess, targetId: string, domain: string, command: string, params: any = {}): Promise<any> {
+async function executeCDPCommand(electronProcess: ElectronProcess, targetId: string, domain: string, command: string, params: Record<string, unknown> = {}): Promise<unknown> {
   let client;
   
   try {
@@ -350,6 +458,7 @@ const server = new Server(
   {
     capabilities: {
       resources: {}, // Enable resources
+      tools: {}, // Enable tools
     },
   }
 );

@@ -6,7 +6,10 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": ["electron", "debug", "mcp", "model-context-protocol"],
   "author": "",
@@ -20,6 +23,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "typescript": "^5.7.2"
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
