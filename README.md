@@ -202,9 +202,14 @@ electron-mcp-server/
 ├── src/
 │   ├── index.ts         # Main server implementation
 │   └── types/           # TypeScript type definitions
+├── tests/               # Test files
+│   ├── integration/    # Integration tests
+│   └── *.test.ts        # Unit tests
+├── scripts/             # Utility scripts
+│   └── cleanup-duplicates.ts  # Duplicate task cleanup utility
 ├── build/               # Compiled JavaScript output
 ├── package.json         # Project dependencies and scripts
-└── tsconfig.json        # TypeScript configuration
+└── tsconfig.json       # TypeScript configuration
 ```
 
 ### Building the Project
@@ -218,6 +223,83 @@ npm run build
 ```bash
 npm run dev
 ```
+
+### Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests once
+npm run test:run
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Task Management and Group Creation
+
+This project uses Commander MCP for task management and orchestration. Tasks are organized into groups with dependency-based wave execution.
+
+#### Creating Task Groups
+
+Task groups allow you to organize related tasks with dependencies and execute them in waves:
+
+1. **Wave-Based Execution**: Tasks are organized into waves based on `dependency_order`
+   - Wave 1 (dependency_order: 0): Foundation tasks that can run in parallel
+   - Wave 2 (dependency_order: 1): Tasks that depend on Wave 1
+   - Wave N: Subsequent waves based on dependencies
+
+2. **Task Group Structure**:
+   ```json
+   {
+     "group_name": "Feature Implementation",
+     "initiative_summary": "Brief description of what the group accomplishes",
+     "total_waves": 3,
+     "tasks": [
+       {
+         "description": "Task description",
+         "task_prompt": "Technical implementation details",
+         "dependency_order": 0,
+         "priority": 5,
+         "context": {
+           "wave": 1,
+           "work_type": "backend",
+           "file_scope": {
+             "allowed": ["src/**"],
+             "forbidden": ["tests/**"]
+           }
+         }
+       }
+     ]
+   }
+   ```
+
+3. **Best Practices**:
+   - Group related tasks together
+   - Set appropriate `dependency_order` to ensure correct execution sequence
+   - Define clear `file_scope` for each task to prevent scope violations
+   - Use descriptive `initiative_summary` for tracking progress
+   - Assign appropriate priorities (1-10, lower = higher priority)
+
+#### Utility Scripts
+
+**Duplicate Cleanup Utility** (`scripts/cleanup-duplicates.ts`):
+```bash
+# Run duplicate detection (dry-run)
+npm run cleanup-duplicates --dry-run
+
+# Run with verbose output
+npm run cleanup-duplicates --verbose
+
+# Show help
+npm run cleanup-duplicates --help
+```
+
+This utility helps identify duplicate tasks using Levenshtein distance algorithm for similarity detection.
 
 ## 🤝 Contributing
 
