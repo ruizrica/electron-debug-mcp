@@ -103,7 +103,7 @@ function isPortAvailable(port: number): Promise<boolean> {
   });
 }
 
-function getElectronExecutablePath(): string {
+export function getElectronExecutablePath(): string {
   const platform = os.platform();
   const possiblePaths: string[] = [];
 
@@ -785,6 +785,336 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   }
   
   throw new Error(`Resource not found: ${uri}`);
+});
+
+// List available tools when clients request them
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "electron_start",
+        description: "Start an Electron application with debugging enabled",
+        inputSchema: {
+          type: "object",
+          properties: {
+            appPath: {
+              type: "string",
+              description: "Path to the Electron application to start"
+            },
+            debugPort: {
+              type: "number",
+              description: "Optional debugging port (default: auto-select available port)"
+            },
+            startupTimeout: {
+              type: "number",
+              description: "Optional startup timeout in milliseconds (default: 30000)"
+            }
+          },
+          required: ["appPath"]
+        }
+      },
+      {
+        name: "electron_stop",
+        description: "Stop a running Electron process",
+        inputSchema: {
+          type: "object",
+          properties: {
+            processId: {
+              type: "string",
+              description: "ID of the Electron process to stop"
+            }
+          },
+          required: ["processId"]
+        }
+      },
+      {
+        name: "electron_list",
+        description: "List all running Electron processes",
+        inputSchema: {
+          type: "object",
+          properties: {}
+        }
+      },
+      {
+        name: "electron_reload",
+        description: "Reload a specific page or application",
+        inputSchema: {
+          type: "object",
+          properties: {
+            processId: {
+              type: "string",
+              description: "ID of the Electron process"
+            },
+            targetId: {
+              type: "string",
+              description: "Optional target ID to reload specific page (reloads all if not specified)"
+            }
+          },
+          required: ["processId"]
+        }
+      },
+      {
+        name: "electron_evaluate",
+        description: "Execute JavaScript in a page context",
+        inputSchema: {
+          type: "object",
+          properties: {
+            processId: {
+              type: "string",
+              description: "ID of the Electron process"
+            },
+            targetId: {
+              type: "string",
+              description: "CDP target ID"
+            },
+            expression: {
+              type: "string",
+              description: "JavaScript expression to evaluate"
+            },
+            returnByValue: {
+              type: "boolean",
+              description: "Whether to return the result by value (default: true)"
+            }
+          },
+          required: ["processId", "targetId", "expression"]
+        }
+      },
+      {
+        name: "electron_pause",
+        description: "Pause JavaScript execution",
+        inputSchema: {
+          type: "object",
+          properties: {
+            processId: {
+              type: "string",
+              description: "ID of the Electron process"
+            },
+            targetId: {
+              type: "string",
+              description: "CDP target ID"
+            }
+          },
+          required: ["processId", "targetId"]
+        }
+      },
+      {
+        name: "electron_resume",
+        description: "Resume JavaScript execution",
+        inputSchema: {
+          type: "object",
+          properties: {
+            processId: {
+              type: "string",
+              description: "ID of the Electron process"
+            },
+            targetId: {
+              type: "string",
+              description: "CDP target ID"
+            }
+          },
+          required: ["processId", "targetId"]
+        }
+      }
+    ]
+  };
+});
+
+// Handle tool execution requests
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    switch (name) {
+      case "electron_start": {
+        const { appPath, debugPort, startupTimeout } = args as {
+          appPath: string;
+          debugPort?: number;
+          startupTimeout?: number;
+        };
+        const process = await startElectronApp(appPath, debugPort, startupTimeout);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                processId: process.id,
+                name: process.name,
+                status: process.status,
+                pid: process.pid,
+                debugPort: process.debugPort,
+                appPath: process.appPath
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_stop": {
+        const { processId } = args as { processId: string };
+        const stopped = stopElectronApp(processId);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: stopped,
+                processId
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_list": {
+        const processes = Array.from(electronProcesses.entries()).map(([id, proc]) => ({
+          id,
+          name: proc.name,
+          status: proc.status,
+          pid: proc.pid,
+          startTime: proc.startTime.toISOString(),
+          appPath: proc.appPath,
+          debugPort: proc.debugPort
+        }));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ processes }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_reload": {
+        const { processId, targetId } = args as { processId: string; targetId?: string };
+        const process = electronProcesses.get(processId);
+        if (!process || process.status !== 'running') {
+          throw new Error(`Process ${processId} not found or not running`);
+        }
+
+        if (targetId) {
+          // Reload specific target
+          await executeCDPCommand(process, targetId, "Page", "reload");
+        } else {
+          // Reload all targets
+          if (process.targets) {
+            for (const target of process.targets) {
+              try {
+                await executeCDPCommand(process, target.id, "Page", "reload");
+              } catch (err) {
+                console.warn(`Failed to reload target ${target.id}:`, err);
+              }
+            }
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: true,
+                processId,
+                targetId: targetId || "all"
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_evaluate": {
+        const { processId, targetId, expression, returnByValue = true } = args as {
+          processId: string;
+          targetId: string;
+          expression: string;
+          returnByValue?: boolean;
+        };
+        const process = electronProcesses.get(processId);
+        if (!process || process.status !== 'running') {
+          throw new Error(`Process ${processId} not found or not running`);
+        }
+
+        const result = await executeCDPCommand(process, targetId, "Runtime", "evaluate", {
+          expression,
+          returnByValue
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                result,
+                processId,
+                targetId
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_pause": {
+        const { processId, targetId } = args as { processId: string; targetId: string };
+        const process = electronProcesses.get(processId);
+        if (!process || process.status !== 'running') {
+          throw new Error(`Process ${processId} not found or not running`);
+        }
+
+        await executeCDPCommand(process, targetId, "Debugger", "pause");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: true,
+                processId,
+                targetId
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "electron_resume": {
+        const { processId, targetId } = args as { processId: string; targetId: string };
+        const process = electronProcesses.get(processId);
+        if (!process || process.status !== 'running') {
+          throw new Error(`Process ${processId} not found or not running`);
+        }
+
+        await executeCDPCommand(process, targetId, "Debugger", "resume");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: true,
+                processId,
+                targetId
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error)
+          }, null, 2)
+        }
+      ],
+      isError: true
+    };
+  }
 });
 
 // Start server using stdio transport
