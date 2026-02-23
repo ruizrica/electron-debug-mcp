@@ -277,6 +277,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the ISC License - see the LICENSE file for details.
+Based on: https://github.com/amafjarkasi/electron-mcp-server
 
 ---
 
