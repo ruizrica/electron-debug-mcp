@@ -12,19 +12,25 @@
     "test:coverage": "vitest run --coverage",
     "cleanup-duplicates": "tsx scripts/cleanup-duplicates.ts"
   },
-  "keywords": ["electron", "debug", "mcp", "model-context-protocol"],
+  "keywords": [
+    "electron",
+    "debug",
+    "mcp",
+    "model-context-protocol"
+  ],
   "author": "",
   "license": "ISC",
   "description": "An MCP server for Electron debugging",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.1.0",
-    "electron": "^29.1.0",
     "chrome-remote-interface": "^0.33.0",
+    "electron": "^29.1.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
     "@vitest/coverage-v8": "^2.1.8",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

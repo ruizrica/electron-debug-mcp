@@ -100,7 +100,7 @@ describe('CDP Type Safety', () => {
     expect(typeof target.webSocketDebuggerUrl).toBe('string');
   });
 
-  it('should require type checking for CDP command results', () => {
+  it('should require type checking for CDP command results', async () => {
     // Simulate executeCDPCommand return type
     const executeCDPCommand = async (
       domain: string,

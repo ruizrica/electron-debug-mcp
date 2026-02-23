@@ -1,5 +1,7 @@
 # 🚀 Electron Debug MCP Server
 
+![Electron Debug MCP Logo](./electron.png)
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Chrome DevTools Protocol](https://img.shields.io/badge/CDP-4285F4?style=for-the-badge&logo=google-chrome&logoColor=white)](https://chromedevtools.github.io/devtools-protocol/)
@@ -54,18 +56,38 @@ Electron Debug MCP Server provides a bridge between the Model Context Protocol (
 
 ## 📥 Installation
 
+### Quick Setup
+
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/electron-mcp-server.git
+git clone https://github.com/yourusername/electron-debug-mcp.git
 
 # Navigate to the project directory
-cd electron-mcp-server
+cd electron-debug-mcp
 
 # Install dependencies
 npm install
 
 # Build the project
 npm run build
+```
+
+### Installing in Another Project / MCP Client
+
+For detailed instructions on installing this MCP server in Cursor, Claude Desktop, or your own project, see **[INSTALLATION.md](./INSTALLATION.md)**.
+
+**Quick Configuration Example (Cursor/Claude Desktop):**
+
+Add to your MCP configuration file:
+```json
+{
+  "mcpServers": {
+    "electron-debug": {
+      "command": "node",
+      "args": ["/absolute/path/to/electron-debug-mcp/build/index.js"]
+    }
+  }
+}
 ```
 
 ## 🚀 Usage
@@ -198,7 +220,7 @@ const cdpResponse = await mcpClient.readResource({
 ### Project Structure
 
 ```
-electron-mcp-server/
+electron-debug-mcp/
 ├── src/
 │   ├── index.ts         # Main server implementation
 │   └── types/           # TypeScript type definitions
