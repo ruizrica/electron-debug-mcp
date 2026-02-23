@@ -3,7 +3,7 @@
       "electron-debug": {                                            
         "command": "node",                                           
         "args": [                                                                                               
-  "/Users/ricardo/Workshop/GitHub/electron-debug-mcp/build/index.js"
+  "/absolute/path/to/electron-debug-mcp/build/index.js"
         ]                                                            
       }                                                              
     }                                                                

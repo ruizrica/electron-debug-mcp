@@ -1,6 +1,8 @@
-# Electron Debug MCP Server
+<p align="center">
+  <img src="./electron.png" alt="Electron Debug MCP" width="300" />
+</p>
 
-![Electron Debug MCP Logo](./electron.png)
+# electron-debug-mcp
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
@@ -24,7 +26,7 @@ A powerful Model Context Protocol (MCP) server for debugging Electron applicatio
 
 ## Overview
 
-Electron Debug MCP Server provides a bridge between the Model Context Protocol (MCP) and Electron applications, enabling advanced debugging capabilities through a standardized API. It allows you to start, monitor, debug, and control Electron applications programmatically, with deep integration with Chrome DevTools Protocol for advanced debugging features.
+electron-debug-mcp provides a bridge between the Model Context Protocol (MCP) and Electron applications, enabling advanced debugging capabilities through a standardized API. It allows you to start, monitor, debug, and control Electron applications programmatically, with deep integration with Chrome DevTools Protocol for advanced debugging features.
 
 ## Features
 
@@ -261,67 +263,6 @@ npm run test:watch
 # Run tests with coverage
 npm run test:coverage
 ```
-
-### Task Management and Group Creation
-
-This project uses Commander MCP for task management and orchestration. Tasks are organized into groups with dependency-based wave execution.
-
-#### Creating Task Groups
-
-Task groups allow you to organize related tasks with dependencies and execute them in waves:
-
-1. **Wave-Based Execution**: Tasks are organized into waves based on `dependency_order`
-   - Wave 1 (dependency_order: 0): Foundation tasks that can run in parallel
-   - Wave 2 (dependency_order: 1): Tasks that depend on Wave 1
-   - Wave N: Subsequent waves based on dependencies
-
-2. **Task Group Structure**:
-   ```json
-   {
-     "group_name": "Feature Implementation",
-     "initiative_summary": "Brief description of what the group accomplishes",
-     "total_waves": 3,
-     "tasks": [
-       {
-         "description": "Task description",
-         "task_prompt": "Technical implementation details",
-         "dependency_order": 0,
-         "priority": 5,
-         "context": {
-           "wave": 1,
-           "work_type": "backend",
-           "file_scope": {
-             "allowed": ["src/**"],
-             "forbidden": ["tests/**"]
-           }
-         }
-       }
-     ]
-   }
-   ```
-
-3. **Best Practices**:
-   - Group related tasks together
-   - Set appropriate `dependency_order` to ensure correct execution sequence
-   - Define clear `file_scope` for each task to prevent scope violations
-   - Use descriptive `initiative_summary` for tracking progress
-   - Assign appropriate priorities (1-10, lower = higher priority)
-
-#### Utility Scripts
-
-**Duplicate Cleanup Utility** (`scripts/cleanup-duplicates.ts`):
-```bash
-# Run duplicate detection (dry-run)
-npm run cleanup-duplicates --dry-run
-
-# Run with verbose output
-npm run cleanup-duplicates --verbose
-
-# Show help
-npm run cleanup-duplicates --help
-```
-
-This utility helps identify duplicate tasks using Levenshtein distance algorithm for similarity detection.
 
 ## Contributing
 
