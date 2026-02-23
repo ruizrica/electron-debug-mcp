@@ -1,4 +1,4 @@
-# 🚀 Electron Debug MCP Server
+# Electron Debug MCP Server
 
 ![Electron Debug MCP Logo](./electron.png)
 
@@ -9,52 +9,52 @@
 
 A powerful Model Context Protocol (MCP) server for debugging Electron applications with deep Chrome DevTools Protocol integration.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Resource Endpoints](#-resource-endpoints)
-- [Chrome DevTools Protocol Integration](#-chrome-devtools-protocol-integration)
-- [Examples](#-examples)
-- [Development](#-development)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Resource Endpoints](#resource-endpoints)
+- [Chrome DevTools Protocol Integration](#chrome-devtools-protocol-integration)
+- [Examples](#examples)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 🔍 Overview
+## Overview
 
 Electron Debug MCP Server provides a bridge between the Model Context Protocol (MCP) and Electron applications, enabling advanced debugging capabilities through a standardized API. It allows you to start, monitor, debug, and control Electron applications programmatically, with deep integration with Chrome DevTools Protocol for advanced debugging features.
 
-## ✨ Features
+## Features
 
-### 🔄 Core Functionality
+### Core Functionality
 
 - **Process Management**
-  - 🚀 Start Electron applications with debugging enabled
-  - 🛑 Stop running Electron processes
-  - 📋 List all active Electron processes
-  - 📊 Monitor process status and logs
+  - Start Electron applications with debugging enabled
+  - Stop running Electron processes
+  - List all active Electron processes
+  - Monitor process status and logs
 
-### 🔍 Debugging Capabilities
+### Debugging Capabilities
 
 - **Chrome DevTools Protocol Integration**
-  - 🎯 Discover and connect to debugging targets
-  - 🧩 Execute CDP commands across domains
-  - 📝 Evaluate JavaScript in the context of pages
-  - 🔄 Reload pages or entire applications
-  - ⏯️ Pause and resume JavaScript execution
+  - Discover and connect to debugging targets
+  - Execute CDP commands across domains
+  - Evaluate JavaScript in the context of pages
+  - Reload pages or entire applications
+  - Pause and resume JavaScript execution
 
-### 📡 Resource Access
+### Resource Access
 
 - **Structured Resource Endpoints**
-  - 📊 Overview of all running Electron processes
-  - 📝 Detailed debug information for specific processes
-  - 📜 Access to process logs
-  - 🎯 List of available debugging targets
-  - 🔍 Direct CDP access for specific targets
+  - Overview of all running Electron processes
+  - Detailed debug information for specific processes
+  - Access to process logs
+  - List of available debugging targets
+  - Direct CDP access for specific targets
 
-## 📥 Installation
+## Installation
 
 ### Quick Setup
 
@@ -90,7 +90,7 @@ Add to your MCP configuration file:
 }
 ```
 
-## 🚀 Usage
+## Usage
 
 ### Starting the Server
 
@@ -108,7 +108,7 @@ The MCP server uses stdio for communication, so clients need to connect using th
 - Connect directly via stdin/stdout
 - Use a tool that supports MCP
 
-## 📡 Resource Endpoints
+## Resource Endpoints
 
 The server exposes the following resource endpoints:
 
@@ -120,7 +120,7 @@ The server exposes the following resource endpoints:
 | `electron://targets` | List of all available debug targets |
 | `electron://cdp/{processId}/{targetId}` | CDP access for a specific target |
 
-## 🛠️ Tools API
+## Tools API
 
 The server exposes executable tools for controlling Electron applications:
 
@@ -134,7 +134,7 @@ The server exposes executable tools for controlling Electron applications:
 | `electron_pause` | Pause JavaScript execution |
 | `electron_resume` | Resume JavaScript execution |
 
-## 🔍 Chrome DevTools Protocol Integration
+## Chrome DevTools Protocol Integration
 
 The server integrates with Chrome DevTools Protocol to provide deep debugging capabilities:
 
@@ -165,7 +165,7 @@ Examples:
 - `electron://cdp/electron-123456/page-1/Runtime/evaluate` - Evaluate JavaScript
 - `electron://cdp/electron-123456/page-1/Debugger/pause` - Pause execution
 
-## 📝 Examples
+## Examples
 
 ### Starting an Electron App
 
@@ -215,7 +215,7 @@ const cdpResponse = await mcpClient.readResource({
 });
 ```
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 
@@ -323,7 +323,7 @@ npm run cleanup-duplicates --help
 
 This utility helps identify duplicate tasks using Levenshtein distance algorithm for similarity detection.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -333,10 +333,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the ISC License - see the LICENSE file for details.
 
 ---
 
-Built with ❤️ using TypeScript, Electron, and Chrome DevTools Protocol.
+Built with TypeScript, Electron, and Chrome DevTools Protocol.
